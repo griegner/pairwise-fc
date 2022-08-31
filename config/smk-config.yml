@@ -1,0 +1,6 @@
+smooth_fwhm: 6
+denoise_strategy: "HMPWMCSFScrub"
+
+preproc: /Volumes/MRI/mfc/derivatives/fmriprep/sub-mfc{sub}/func/sub-mfc{sub}_task-{task}_acq-epi_rec-fmap_space-MNI152NLin6Asym_res-2_desc-preproc_bold.nii.gz
+preproc_to_pfc: data/pairwise-fc/sub-{sub}/sub-{sub}_task-{task}_desc-corr_atlas-schaefer1000_denoise-HMPWMCSFScrub_pfc.npy
+agg_pfc: data/pairwise-fc/group/desc-partialCorr_atlas-schaefer1000_denoise-HMPWMCSFScrub.npy

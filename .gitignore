@@ -1,0 +1,6 @@
+tmp*
+*egg-info
+__pycache__
+data/
+.vscode
+.snakemake
