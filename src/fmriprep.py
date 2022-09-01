@@ -2,6 +2,7 @@ from pathlib import Path
 
 import pandas as pd
 from nilearn.interfaces import bids, fmriprep
+from nilearn.glm.first_level import make_first_level_design_matrix
 from nilearn import image
 
 denoise_strategies = {
@@ -9,6 +10,15 @@ denoise_strategies = {
         strategy=("motion", "high_pass", "wm_csf", "scrub"),
         motion="basic",
         wm_csf="derivatives",
+        scrub=0,
+        fd_threshold=0.5,
+        std_dvars_threshold=3.0,
+    ),
+    "HMPWMCSFScrubGS": dict(
+        strategy=("motion", "high_pass", "wm_csf", "scrub", "global_signal"),
+        motion="basic",
+        wm_csf="derivatives",
+        global_signal="basic",
         scrub=0,
         fd_threshold=0.5,
         std_dvars_threshold=3.0,
@@ -46,6 +56,7 @@ class Data:
         self.nvolumes_scrubbed = self._get_nvolumes_scrubbed()
 
     def _get_events_df(self):
+        """return the events dataframe"""
         events = bids.get_bids_files(
             Path(self.preproc).parents[4] / "rawdata",
             file_tag="events",
@@ -62,3 +73,28 @@ class Data:
             return 0
         else:
             return self.confounds.index.difference(self.sample_mask).shape[0]
+
+    def make_design_matrix(self, hrf_model="spm + derivative"):
+        """generate a design matrix from `nilearn.glm.first_level.make_first_level_design_matrix`
+
+        Parameters
+        ----------
+        hrf_model : str, optional
+            defines the HRF model to use, by default "spm + derivative"
+
+        Returns
+        -------
+        DataFrame instance
+            index = frame times, columns = regressors
+        """
+        if self.sample_mask is None:
+            frame_times = self.confounds.index * self.tr
+        else:
+            frame_times = self.sample_mask * self.tr
+
+        return make_first_level_design_matrix(
+            frame_times=frame_times,
+            events=self.events,
+            hrf_model=hrf_model,
+            drift_model=None,
+        )
