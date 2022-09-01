@@ -74,13 +74,15 @@ class Data:
         else:
             return self.confounds.index.difference(self.sample_mask).shape[0]
 
-    def make_design_matrix(self, hrf_model="spm + derivative"):
+    def make_design_matrix(self, hrf_model="spm + derivative", drop_constant=False):
         """generate a design matrix from `nilearn.glm.first_level.make_first_level_design_matrix`
 
         Parameters
         ----------
         hrf_model : str, optional
             defines the HRF model to use, by default "spm + derivative"
+        drop_constant : bool, optional
+            drop the constant/intercept regressor, by default False
 
         Returns
         -------
@@ -92,9 +94,14 @@ class Data:
         else:
             frame_times = self.sample_mask * self.tr
 
-        return make_first_level_design_matrix(
+        dm = make_first_level_design_matrix(
             frame_times=frame_times,
             events=self.events,
             hrf_model=hrf_model,
             drift_model=None,
         )
+
+        if drop_constant:
+            dm = dm.drop("constant", axis="columns")
+
+        return dm
