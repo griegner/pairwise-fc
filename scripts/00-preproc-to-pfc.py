@@ -2,14 +2,14 @@ import argparse
 from pathlib import Path
 
 import numpy as np
-from nilearn import connectome, datasets, maskers
-from src import fmriprep
+from nilearn import datasets, maskers
+from src import fmriprep, pairwise_fc
 
 
 def main(args):
 
     data = fmriprep.Data(args.preproc, args.denoise_strategy)
-    atlas = datasets.fetch_atlas_schaefer_2018(n_rois=1000, resolution_mm=2)["maps"]
+    atlas = datasets.fetch_atlas_schaefer_2018(n_rois=100, resolution_mm=2)["maps"]
 
     masker = maskers.NiftiLabelsMasker(
         atlas,
@@ -21,17 +21,19 @@ def main(args):
         strategy="mean",
     )
 
-    corr_model = connectome.ConnectivityMeasure(
-        kind="correlation", vectorize=True, discard_diagonal=True
-    )  # LedoitWolf covariance estimator
-
     roi_timeseries = masker.fit_transform(
         imgs=data.preproc, confounds=data.confounds, sample_mask=data.sample_mask
     )
 
-    corr_coefficients = corr_model.fit_transform([roi_timeseries])[0]
-    corr_z_transform = np.arctanh(corr_coefficients)  # fisher z-transform
-    np.save(args.output, corr_z_transform)
+    dm = data.make_design_matrix(hrf_model="spm + derivative", drop_constant=True)
+    dm["stim"] = dm["stim"] - np.mean(
+        [dm["stim"].min(), dm["stim"].max()]
+    )  # zero center
+
+    ppi = pairwise_fc.PPI(vectorize=True, fit_intercept=False, n_jobs=args.n_jobs)
+    ppi_coefs = ppi.fit_transform(roi_timeseries, dm)
+
+    np.save(args.output, ppi_coefs)
 
 
 if __name__ == "__main__":
