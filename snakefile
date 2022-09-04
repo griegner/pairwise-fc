@@ -36,6 +36,6 @@ rule preproc_to_pfc:
     params:
         smooth_fwhm=config["smooth_fwhm"],
         denoise_strategy=config["denoise_strategy"],
-    threads: 1
+    threads: config["n_jobs"]
     shell:
         "python {input.cmd} {input.path} {output} {params.denoise_strategy} --smooth_fwhm {params.smooth_fwhm} --n_jobs {threads}"
