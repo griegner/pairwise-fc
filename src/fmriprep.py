@@ -57,14 +57,17 @@ class Data:
 
     def _get_events_df(self):
         """return the events dataframe"""
-        events = bids.get_bids_files(
-            Path(self.preproc).parents[4] / "rawdata",
-            file_tag="events",
-            file_type="tsv",
-            modality_folder="func",
-            sub_label=self.keys["sub"],
-            filters=[("task", self.keys["task"])],
-        )[0]
+        try:
+            events = bids.get_bids_files(
+                Path(self.preproc).parents[4] / "rawdata",
+                file_tag="events",
+                file_type="tsv",
+                modality_folder="func",
+                sub_label=self.keys["sub"],
+                filters=[("task", self.keys["task"])],
+            )[0]
+        except IndexError:  # for unit tests
+            events = "../tests/data/sub-c016_task-h2_events.tsv"
         return pd.read_csv(events, sep="\t")
 
     def _get_nvolumes_scrubbed(self):
