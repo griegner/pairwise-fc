@@ -6,6 +6,7 @@ Afyouni, Smith, and Nichols, “Effective Degrees of Freedom of the Pearson's Co
 
 import numpy as np
 import scipy.stats as sp
+import statsmodels.stats.multitest as smmt
 
 
 def nextpow2(x):
@@ -296,6 +297,28 @@ def tukeytaperme(ac, T, M, verbose=True):
     return tt_ts
 
 
+def binarize(W, copy=True):
+    """
+    Binarizes an input weighted connection matrix.  If copy is not set, this
+    function will *modify W in place.*
+    Parameters
+    ----------
+    W : NxN np.ndarray
+        weighted connectivity matrix
+    copy : bool
+        if True, returns a copy of the matrix. Otherwise, modifies the matrix
+        in place. Default value=True.
+    Returns
+    -------
+    W : NxN np.ndarray
+        binary connectivity matrix
+    """
+    if copy:
+        W = W.copy()
+    W[W != 0] = 1
+    return W
+
+
 def xDF_Calc(
     ts, T, method="truncate", methodparam="adaptive", verbose=True, TV=True, copy=True
 ):
@@ -499,3 +522,56 @@ def xDF_Calc(
     }
 
     return xDFOut
+
+
+def stat_threshold(Z, mce="fdr_bh", a_level=0.05, side="two", copy=True):
+    """
+    Threshold z maps
+
+    Parameters
+    ----------
+
+    mce: multiple comparison error correction method, should be
+    among of the options below. [defualt: 'fdr_bh'].
+    The options are from statsmodels packages:
+
+        `b`, `bonferroni` : one-step correction
+        `s`, `sidak` : one-step correction
+        `hs`, `holm-sidak` : step down method using Sidak adjustments
+        `h`, `holm` : step-down method using Bonferroni adjustments
+        `sh`, `simes-hochberg` : step-up method  (independent)
+        `hommel` : closed method based on Simes tests (non-negative)
+        `fdr_i`, `fdr_bh` : Benjamini/Hochberg  (non-negative)
+        `fdr_n`, `fdr_by` : Benjamini/Yekutieli (negative)
+        'fdr_tsbh' : two stage fdr correction (Benjamini/Hochberg)
+        'fdr_tsbky' : two stage fdr correction (Benjamini/Krieger/Yekutieli)
+        'fdr_gbs' : adaptive step-down fdr correction (Gavrilov, Benjamini, Sarkar)
+    """
+
+    if copy:
+        Z = Z.copy()
+
+    if side == "one":
+        sideflag = 1
+    elif side == "two" or "double":
+        sideflag = 2
+
+    Idx = np.triu_indices(Z.shape[0], 1)
+    Zv = Z[Idx]
+
+    Pv = sp.norm.cdf(-np.abs(Zv)) * sideflag
+
+    [Hv, adjpvalsv] = smmt.multipletests(Pv, method=mce)[:2]
+    adj_pvals = np.zeros(Z.shape)
+    Zt = np.zeros(Z.shape)
+
+    Zv[np.invert(Hv)] = 0
+    Zt[Idx] = Zv
+    Zt = Zt + Zt.T
+
+    adj_pvals[Idx] = adjpvalsv
+    adj_pvals = adj_pvals + adj_pvals.T
+
+    adj_pvals[range(Z.shape[0]), range(Z.shape[0])] = 0
+
+    return Zt, binarize(Zt), adj_pvals
