@@ -169,4 +169,4 @@ dependencies:
     - wrapt==1.14.1
     - yte==1.5.1
     - zipp==3.8.1
-prefix: /Users/zeidanlab/miniconda3/envs/wb-spi
+prefix: /Users/zeidanlab/miniconda3/envs/pairwise-fc
